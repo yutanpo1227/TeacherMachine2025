@@ -3,11 +3,14 @@
 
 class LineSensor {
     public:
-        LineSensor(int startPin, int numSensors, int* thresholds);
+        LineSensor(int startPin, int numSensors, const int* thresholds);
         int readAngle();
+        bool checkOnLine();
+        void setMode(bool mode);
     private:
         int startPin;
         int numSensors;
-        int* thresholds;
+        const int* thresholds;
+        bool mode;
 };
 #endif
