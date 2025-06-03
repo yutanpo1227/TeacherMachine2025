@@ -1,6 +1,6 @@
 # TeacherMachine
 ## 概要
-バイト先での見本用マシン
+バイト先でのロボカップジュニアサッカー用の見本マシン
 ![TeacherMachine](./images/Machine.png)
 
 ## 構成
