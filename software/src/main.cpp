@@ -5,57 +5,84 @@
 #include "MotorController.h"
 #include "Motor.h"
 #include "GyroSensor.h"
+#include "Debuger.h"
 
-#define ENABLE_LINE_SENSOR false
-#define ENABLE_GYRO_SENSOR false
+// マシンのセットアップ値
+#define SPEED 200  // モーターの速度
+#define ENABLE_LINE_SENSOR true  // ラインセンサーの有効化
+#define ENABLE_GYRO_SENSOR true  // ジャイロセンサーの有効化
+#define ENABLE_DEBUGER false  // デバッグモードの有効化
 
-#define SPEED 127
-#define GYRO_THRESHOLD 30
+// 回り込みの設定値
+#define WRAP_AROUND_ANGLE_THRESHOLD 20  // 回り込み角度の閾値
+#define WRAP_AROUND_BALL_DIST_THRESHOLD 950  // 回り込み距離の閾値
+#define WRAP_AROUND_ANGLE_RATIO 2  // 回り込み角度の倍率
 
-const int lineThresholds[] = {200, 200, 200, 200, 200, 200, 200, 200};
+// ラインセンサーの閾値
+const int LINE_SENSOR_THRESHOLDS[] = {870, 800, 920, 870, 850, 820, 820, 900};
 
-LineSensor lineSensor = LineSensor(0, 8, lineThresholds);
+// センサーのインスタンス
+LineSensor lineSensor = LineSensor(0, 8, LINE_SENSOR_THRESHOLDS);
 IRSensor irSensor = IRSensor(22, 8);
 GyroSensor gyroSensor = GyroSensor();
 
-Motor motor1 = Motor(2, 3);
-Motor motor2 = Motor(5, 6);
-Motor motor3 = Motor(7, 8);
-Motor motor4 = Motor(11, 12);
+// デバッガーのインスタンス
+Debuger debuger = Debuger(ENABLE_DEBUGER);
+
+// 各モーターのインスタンス
+Motor motor1 = Motor(3, 2);
+Motor motor2 = Motor(6, 5);
+Motor motor3 = Motor(8, 7);
+Motor motor4 = Motor(12, 11);
+
+// モーターコントローラーのインスタンス
 MotorController motorController = MotorController(&motor1, &motor2, &motor3, &motor4);
 
 void setup() {
-  Serial.begin(9600);
+  debuger.begin(9600);
   Wire.begin();
+  gyroSensor.setup();
   // 各センサーを有効にするかどうか
   lineSensor.setMode(ENABLE_LINE_SENSOR);
   gyroSensor.setMode(ENABLE_GYRO_SENSOR);
+  debuger.printSensorStatus(ENABLE_LINE_SENSOR, ENABLE_GYRO_SENSOR);
 }
 
 void loop() {
-  // ライン上にいるなら、ラインの角度の反対に進む
   if (lineSensor.checkOnLine()) {
-    int moveAngle = lineSensor.readAngle() - 180;
-    motorController.moveDirection(moveAngle, SPEED);
-    return;
+    motorController.stop();
   }
-
+  const int lineAngle = lineSensor.readAngle();
   const int gyroAngle = gyroSensor.readYawAngle();
-  // ジャイロセンサーが閾値以上であれば姿勢を修正する
-  if (gyroAngle > 0 && gyroAngle > GYRO_THRESHOLD) {
-    motorController.turnRight(abs(gyroAngle));
-    return;
-  } else if (gyroAngle < 0 && gyroAngle > -GYRO_THRESHOLD) {
-    motorController.turnLeft(abs(gyroAngle));
-    return;
-  }
-
   const int ballAngle = irSensor.readAngle();
   const int ballDist = irSensor.readDistance();
-  // ボールが近い時は大きく回り込む
-  if (ballDist > 100) {
-    motorController.moveDirection(ballAngle * 1.5, SPEED);
-  } else {
-    motorController.moveDirection(ballAngle, SPEED);
+
+  debuger.printValues(gyroAngle, lineAngle, ballAngle, ballDist);
+
+  int moveAngle = calcWrapAroundAngle(ballAngle, ballDist);
+  motorController.moveDirection(moveAngle, SPEED, gyroAngle, lineAngle);
+}
+
+
+// 回り込み角度の計算
+int calcWrapAroundAngle(int ballAngle, int ballDist) {
+    // ボールの角度の範囲を-180~180に変換
+  int correctBallAngle = ballAngle - 90;
+  if (correctBallAngle > 180) {
+    correctBallAngle = correctBallAngle - 360;
   }
+
+  int moveAngle = correctBallAngle;
+  // ボールが近い時は大きく回り込む
+  if (ballDist > WRAP_AROUND_BALL_DIST_THRESHOLD) {
+    if (correctBallAngle > WRAP_AROUND_ANGLE_THRESHOLD || correctBallAngle < -WRAP_AROUND_ANGLE_THRESHOLD) {
+      moveAngle = correctBallAngle * WRAP_AROUND_ANGLE_RATIO;
+    }
+  }
+  // ボールの角度を元の座標系に変換
+  if (moveAngle < 0) {
+    moveAngle = moveAngle + 360;
+  }
+  moveAngle = moveAngle + 90;
+  return moveAngle;
 }

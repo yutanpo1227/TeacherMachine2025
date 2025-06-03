@@ -8,6 +8,7 @@ class GyroSensor {
         GyroSensor();
         int readYawAngle();
         void setMode(bool mode);
+        void setup();
     private:
         Adafruit_BNO055 bno;
         bool mode;
