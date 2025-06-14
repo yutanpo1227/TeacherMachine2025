@@ -8,18 +8,18 @@
 #include "Debuger.h"
 
 // マシンのセットアップ値
-#define SPEED 200  // モーターの速度
+#define SPEED 100  // モーターの速度
 #define ENABLE_LINE_SENSOR true  // ラインセンサーの有効化
 #define ENABLE_GYRO_SENSOR true  // ジャイロセンサーの有効化
-#define ENABLE_DEBUGER false  // デバッグモードの有効化
+#define ENABLE_DEBUGER true  // デバッグモードの有効化
 
 // 回り込みの設定値
-#define WRAP_AROUND_ANGLE_THRESHOLD 20  // 回り込み角度の閾値
-#define WRAP_AROUND_BALL_DIST_THRESHOLD 950  // 回り込み距離の閾値
-#define WRAP_AROUND_ANGLE_RATIO 2  // 回り込み角度の倍率
+#define WRAP_AROUND_ANGLE_THRESHOLD 10  // 回り込み角度の閾値
+#define WRAP_AROUND_BALL_DIST_THRESHOLD 850  // 回り込み距離の閾値
+#define WRAP_AROUND_ANGLE_RATIO 1.8  // 回り込み角度の倍率
 
 // ラインセンサーの閾値
-const int LINE_SENSOR_THRESHOLDS[] = {870, 800, 920, 870, 850, 820, 820, 900};
+const int LINE_SENSOR_THRESHOLDS[] = {880, 850, 920, 870, 850, 850, 820, 900};
 
 // センサーのインスタンス
 LineSensor lineSensor = LineSensor(0, 8, LINE_SENSOR_THRESHOLDS);
@@ -38,6 +38,8 @@ Motor motor4 = Motor(12, 11);
 // モーターコントローラーのインスタンス
 MotorController motorController = MotorController(&motor1, &motor2, &motor3, &motor4);
 
+int calcWrapAroundAngle(int ballAngle, int ballDist);
+
 void setup() {
   debuger.begin(9600);
   Wire.begin();
@@ -49,18 +51,17 @@ void setup() {
 }
 
 void loop() {
-  if (lineSensor.checkOnLine()) {
-    motorController.stop();
-  }
   const int lineAngle = lineSensor.readAngle();
+  const float lineVectorMagnitude = lineSensor.readVectorMagnitude();
   const int gyroAngle = gyroSensor.readYawAngle();
   const int ballAngle = irSensor.readAngle();
   const int ballDist = irSensor.readDistance();
 
-  debuger.printValues(gyroAngle, lineAngle, ballAngle, ballDist);
+  debuger.printValues(gyroAngle, lineAngle, lineVectorMagnitude, ballAngle, ballDist);
 
   int moveAngle = calcWrapAroundAngle(ballAngle, ballDist);
-  motorController.moveDirection(moveAngle, SPEED, gyroAngle, lineAngle);
+  Serial.println(moveAngle);
+  motorController.moveDirection(moveAngle, SPEED, gyroAngle, lineAngle, lineVectorMagnitude);
 }
 
 

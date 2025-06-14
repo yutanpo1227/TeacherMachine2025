@@ -25,7 +25,7 @@ void Debuger::println(String message) {
     Serial.println(message);
 }
 
-void Debuger::printValues(int gyroAngle, int lineAngle, int ballAngle, int ballDist) {
+void Debuger::printValues(int gyroAngle, int lineAngle, float lineVectorMagnitude, int ballAngle, int ballDist) {
     if (!isEnabled) {
         return;
     }
@@ -33,6 +33,8 @@ void Debuger::printValues(int gyroAngle, int lineAngle, int ballAngle, int ballD
     Serial.print(gyroAngle);
     Serial.print(" lineAngle: ");
     Serial.print(lineAngle);
+    Serial.print(" lineVectorMagnitude: ");
+    Serial.print(lineVectorMagnitude);
     Serial.print(" ballAngle: ");
     Serial.print(ballAngle);
     Serial.print(" ballDist: ");

@@ -3,6 +3,9 @@
 
 #define MAX_CORRECTION_POWER 50
 
+#define LINE_STOP_ANGLE_THRESHOLD 10
+#define LINE_VECTOR_MAGNITUDE_THRESHOLD 0.75
+
 MotorController::MotorController(Motor* motor1, Motor* motor2, Motor* motor3, Motor* motor4) {
     this->motor1 = motor1;
     this->motor2 = motor2;
@@ -15,22 +18,27 @@ void MotorController::moveDirection(int direction, int speed) {
 }
 
 void MotorController::moveDirection(int direction, int speed, int gyroAngle) {
-    this->moveDirection(direction, speed, gyroAngle, -1);
+    this->moveDirection(direction, speed, gyroAngle, -1, 0);
 }
 
-void MotorController::moveDirection(int direction, int speed, int gyroAngle, int lineAngle) {
+void MotorController::moveDirection(int direction, int speed, int gyroAngle, int lineAngle, float lineVectorMagnitude) {
     if (lineAngle != -1) {
-        if (direction == lineAngle) {
+        if (abs(direction - lineAngle) < LINE_STOP_ANGLE_THRESHOLD) {
             this->stop();
             return;
-        }
-        float component_x = cos(direction * PI / 180) - cos(lineAngle * PI / 180);
-        float component_y = sin(direction * PI / 180) - sin(lineAngle * PI / 180);
-        if (component_x == 0 && component_y == 0) {
+        } else if (lineVectorMagnitude < LINE_VECTOR_MAGNITUDE_THRESHOLD) {
             this->stop();
-            return;
+            direction = lineAngle - 180;
+        } else {
+            this->stop();
+            float component_x = cos(direction * PI / 180) - cos(lineAngle * PI / 180) * 1.5;
+            float component_y = sin(direction * PI / 180) - sin(lineAngle * PI / 180) * 1.5;
+            if (component_x == 0 && component_y == 0) {
+                this->stop();
+                return;
+            }
+            direction = atan2(component_y, component_x) * 180 / PI;
         }
-        direction = atan2(component_y, component_x) * 180 / PI;
     }
     // 姿勢が左右90度以上ずれている場合はその場で旋回
     if (gyroAngle > 90 && gyroAngle < 180) {

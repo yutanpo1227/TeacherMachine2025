@@ -13,7 +13,7 @@ class Debuger {
         void begin(int baudRate);
         void printSensorStatus(bool lineSensor, bool gyroSensor);
         void println(String message);
-        void printValues(int gyroAngle, int lineAngle, int ballAngle, int ballDist);
+        void printValues(int gyroAngle, int lineAngle, float lineVectorMagnitude, int ballAngle, int ballDist);
     private:
         bool isEnabled;
 };
